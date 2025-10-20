@@ -1,6 +1,45 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual Environments
+.venv/
+env/
+venv/
+
+# Jupyter Notebook checkpoints and outputs
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Notebooks outputs (keep sources only)
+*.ipynb
+
+# Models / artifacts
+*.h5
+*.hdf5
+*.ckpt
+*.joblib
+*.pkl
+
+# Data
+/data/
+/datasets/
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+/.idea/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
 
 # C extensions
 *.so
