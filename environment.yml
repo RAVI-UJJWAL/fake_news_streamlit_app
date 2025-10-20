@@ -1,0 +1,16 @@
+name: fake_news_tf
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - tensorflow==2.18.0
+    - streamlit
+    - scikit-learn
+    - pandas
+    - joblib
+    - nltk
+    - matplotlib
+    - seaborn

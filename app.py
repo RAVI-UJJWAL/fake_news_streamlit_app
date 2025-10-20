@@ -15,19 +15,31 @@ from pathlib import Path
 
 # path for serialized DL model
 DL_MODEL_PATH = Path(__file__).parent / 'dl_model.h5'
+# path for serialized TF-IDF vectorizer
+VECTORIZER_PATH = Path(__file__).parent / 'tfidf_vectorizer.joblib'
 
 # Page config and simple CSS to make UI colorful
 st.set_page_config(page_title='Fake News Detector', page_icon='📰', layout='centered')
 _style = """
 <style>
+.stApp {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
 body {background: linear-gradient(180deg, #fff 0%, #f7fbff 100%);} 
 .stApp header {background: linear-gradient(90deg,#6dd5fa,#2980b9);}
-.big-title {font-size:28px; font-weight:700; color:#0b3954}
-.card {background: #ffffff; border-radius:8px; padding:12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);}
-.muted {color:#6b7a8f}
+.big-title {font-size:34px; font-weight:700; color:#0b3954}
+.card {background: #ffffff; border-radius:10px; padding:14px; box-shadow: 0 4px 14px rgba(11,57,84,0.06);}
+.muted {color:#4b5563; font-size:16px}
+/* textarea styling */
+textarea[aria-label="Paste news text here"] {font-size:16px; line-height:1.4}
+.footer {text-align:center; font-size:16px; color:#ffffff; margin-top:18px; background:#87CEEB; padding:14px; border-radius:8px}
+.topbar {background: linear-gradient(90deg,#6dd5fa,#2980b9); padding:14px; text-align:center; border-radius:8px; margin-bottom:14px}
+.topbar h1 {color:#ffffff; margin:0; font-size:26px}
+
 </style>
 """
 st.markdown(_style, unsafe_allow_html=True)
+
+# Top title bar in the header area
+st.markdown('<div class="topbar"><h1>Fake News Detector</h1></div>', unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -154,10 +166,21 @@ def try_load_dl_model():
             return None
     return None
 
+def try_load_vectorizer():
+    """Attempt to load a serialized TF-IDF vectorizer if present."""
+    if VECTORIZER_PATH.exists():
+        try:
+            vect = joblib.load(str(VECTORIZER_PATH))
+            return vect
+        except Exception as e:
+            st.warning(f'Could not load saved TF-IDF vectorizer: {e}')
+            return None
+    return None
+
 
 def main():
-    st.markdown('<div class="big-title">Fake News Detector</div>', unsafe_allow_html=True)
-    st.markdown('<div class="muted">Paste an article or news text and choose a model (Logistic Regression or Feedforward DL) to classify it as Fake or Real.</div>', unsafe_allow_html=True)
+    # subtitle / instructions
+    st.markdown('<div class="muted">Paste an article or news text and choose a model from sidebar to classify it as Fake or Real.</div>', unsafe_allow_html=True)
 
     true_df, fake_df = download_and_load_data()
 
@@ -188,12 +211,22 @@ def main():
     dl_loaded = try_load_dl_model()
     if dl_loaded is not None:
         st.session_state['dl_model'] = dl_loaded
+    # try load vectorizer if present
+    vect_loaded = try_load_vectorizer()
+    if vect_loaded is not None:
+        st.session_state['vectorizer'] = vect_loaded
     # Fit classical model now (fit_model returns X_train/X_test splits too)
     if train_button:
         with st.spinner('Training selected model...'):
             try:
                 model_lr, vectorizer, acc, X_train, X_test, y_train, y_test = fit_model(df)
                 st.sidebar.success(f'Logistic model trained. Test accuracy: {acc:.3f}')
+                # persist the vectorizer for faster startup
+                try:
+                    joblib.dump(vectorizer, str(VECTORIZER_PATH))
+                    st.sidebar.info(f'Saved TF-IDF vectorizer to {VECTORIZER_PATH.name}')
+                except Exception as e:
+                    st.sidebar.warning(f'Failed to save TF-IDF vectorizer: {e}')
             except Exception as e:
                 st.sidebar.error(f'Failed training: {e}')
                 return
@@ -232,8 +265,21 @@ def main():
     nltk.download('stopwords', quiet=True)
     stop_words = set(stopwords.words('english'))
 
-    user_text = st.text_area('Paste news text here', height=200)
-    if st.button('Predict'):
+    # Use session_state to hold the input so the Clear button can reset it
+    if 'input_text' not in st.session_state:
+        st.session_state['input_text'] = ''
+
+    user_text = st.text_area('Paste news text here', value=st.session_state['input_text'], key='input_text', height=360)
+    # Place Predict and Clear side-by-side; use a callback to clear
+    def _clear_input():
+        st.session_state['input_text'] = ''
+
+    c1, c2 = st.columns([1, 0.35])
+    do_predict = c1.button('Predict')
+    c2.button('Clear', on_click=_clear_input)
+
+    if do_predict:
+        user_text = st.session_state.get('input_text', '')
         if not user_text or user_text.strip() == '':
             st.warning('Please enter news text to classify.')
         else:
@@ -274,6 +320,10 @@ def main():
 
     st.sidebar.markdown('---')
     st.sidebar.write('Notes: You can upload CSVs matching the original dataset format (columns: title, text, subject, date).')
+
+    # Footer / credits (prominent, sky-blue background)
+    st.markdown('<div style="height:18px"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">&copy; Developed by Pokhraj, Ravi, Mansi and Ramya</div>', unsafe_allow_html=True)
 
 
 if __name__ == '__main__':
