@@ -16,7 +16,9 @@ venv/
 *.nbconvert.ipynb
 
 # Notebooks outputs (keep sources only)
+# Ignore notebooks by default but allow cleaned versions with suffix _cleaned.ipynb
 *.ipynb
+!*_cleaned.ipynb
 
 # Models / artifacts
 *.h5
